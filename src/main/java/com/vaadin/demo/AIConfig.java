@@ -13,6 +13,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dev.langchain4j.store.embedding.pinecone.PineconeEmbeddingStore;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,9 @@ public class AIConfig {
 
     @Value("${ai.embedding-store}")
     private String embeddingStoreType;
+
+    @Value("${ai.embedding-model}")
+    private String embeddingModelType;
 
     /*
      * Keep track of the chat history for each chat.
@@ -67,6 +71,20 @@ public class AIConfig {
         }
     }
 
+    @Bean
+    EmbeddingModel embeddingModel(@Value("${open-ai.embedding-model.api-key}") String apiKey) {
+        if ("openai".equals(embeddingModelType) && !apiKey.isEmpty()) {
+            log.info("Using OpenAI embedding model");
+            return OpenAiEmbeddingModel.builder()
+                .apiKey(apiKey)
+                .modelName("text-embedding-3-small")
+                .build();
+        } else {
+            log.info("Using default embedding model");
+            return null;
+        }
+    }
+
     /*
      * Import the documents from the file system into the embedding store.
      * Note: In real-world scenarios, you most likely want to process docs
@@ -74,7 +92,7 @@ public class AIConfig {
      * consuming them.
      */
     @Bean
-    ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore, ApplicationArguments args) {
+    ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, ApplicationArguments args) {
         return runnerArgs -> {
             if ("inmemory".equals(embeddingStoreType) || args.containsOption("import-docs")) {
                 if (docsLocation == null || docsLocation.isEmpty()) {
@@ -83,7 +101,15 @@ public class AIConfig {
                 }
                 log.info("Importing documents from {}", docsLocation);
                 var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
-                EmbeddingStoreIngestor.ingest(docs, embeddingStore);
+                if (embeddingModel != null) {
+                    EmbeddingStoreIngestor.builder()
+                        .embeddingStore(embeddingStore)
+                        .embeddingModel(embeddingModel)
+                        .build()
+                        .ingest(docs);
+                } else {
+                    EmbeddingStoreIngestor.ingest(docs, embeddingStore);
+                }
                 log.info("Imported {} documents", docs.size());
             } else {
                 log.info("Skipping document import. Use --import-docs to import documents.");
@@ -96,7 +122,14 @@ public class AIConfig {
      * from the embedding store before answering questions.
      */
     @Bean
-    ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore) {
-        return EmbeddingStoreContentRetriever.from(embeddingStore);
+    ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+        if (embeddingModel != null) {
+            return EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(embeddingStore)
+                .embeddingModel(embeddingModel)
+                .build();
+        } else {
+            return EmbeddingStoreContentRetriever.from(embeddingStore);
+        }
     }
 }

@@ -15,19 +15,31 @@ The chatbot uses [LangChain4j](https://github.com/langchain4j/langchain4j) and t
 Update the `docs.location` property in `application.properties` to point to a folder with relevant documents. 
 LangChain4j uses Apache Tika internally when processing the files, so most file types work.
 
-### Using Open AI
+### Chat responses
+
+Chat responses can be provided through either Open AI or a local LLM.
+
+#### Using Open AI
 
 OpenAI gives you better quality answers but requires you to send data to a 3rd party.
 
 To use OpenAI, get an [API key](https://platform.openai.com/api-keys) and configure it in `application.properties`. 
 Optionally, you can also configure the model in the properties. 
 
-### Using a local LLM
+#### Using a local LLM
 
 Using a local model allows you to keep your data on your local computer, but the quality of answers will not be as good as with OpenAI.
 
 Install [Ollama](https://ollama.com/) and the `llama3` model.
 Comment out the OpenAI section of `application.properties` and uncomment the Ollama section.
+
+### Embedding model
+
+By default, the application uses a small and local embedding model (`dev.langchain4j.model.embedding.onnx.bgesmallenv15q.BgeSmallEnV15QuantizedEmbeddingModel`) this model leverages 384 dimensions.
+
+#### Using OpenAI
+
+You can opt to use an OpenAI based embedding model (`text-embedding-3-small`) leveraging 1536 dimensions. This **should** produce better quality embeddings.
 
 ### Embedding store (Vector DB)
 
@@ -36,7 +48,7 @@ If you need to store more documents, consider using any of the [embedding stores
 
 #### Pinecone
 
-To use Pinecone, use or set up an index with a vector dimension of 384. Also, provide the following details in the `application.properties` file.
+To use Pinecone, use or set up an index according to the leveraged embedding model (with 384 or 1536 dimensions). Also, provide the following details in the `application.properties` file.
 
 - [API key](https://www.pinecone.io/)
 - index name
