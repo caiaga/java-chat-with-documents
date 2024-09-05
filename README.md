@@ -29,10 +29,14 @@ Using a local model allows you to keep your data on your local computer, but the
 Install [Ollama](https://ollama.com/) and the `llama3` model.
 Comment out the OpenAI section of `application.properties` and uncomment the Ollama section.
 
-### Optional: Embedding store (Vector DB)
+### Embedding store (Vector DB)
 
 By default, the application uses an in-memory embedding store. This is fine for demos and small amounts of data. 
 If you need to store more documents, consider using any of the [embedding stores that LangChain4j supports](https://docs.langchain4j.dev/integrations/embedding-stores/).
+
+#### Pinecone
+
+To use Pinecone, get an [API key](https://www.pinecone.io/), set up an index and configure them in `application.properties`. Use or set up an index with a vector dimension of 384.
 
 ## ▶️ Running the application
 
