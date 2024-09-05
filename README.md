@@ -29,10 +29,18 @@ Using a local model allows you to keep your data on your local computer, but the
 Install [Ollama](https://ollama.com/) and the `llama3` model.
 Comment out the OpenAI section of `application.properties` and uncomment the Ollama section.
 
-### Optional: Embedding store (Vector DB)
+### Embedding store (Vector DB)
 
 By default, the application uses an in-memory embedding store. This is fine for demos and small amounts of data. 
 If you need to store more documents, consider using any of the [embedding stores that LangChain4j supports](https://docs.langchain4j.dev/integrations/embedding-stores/).
+
+#### Pinecone
+
+To use Pinecone, use or set up an index with a vector dimension of 384. Also, provide the following details in the `application.properties` file.
+
+- [API key](https://www.pinecone.io/)
+- index name
+- set `ai.embedding-store` to `pinecone`
 
 ## ▶️ Running the application
 
@@ -42,3 +50,11 @@ http://localhost:8080 in your browser.
 
 You can also import the project to your IDE of choice as you would with any
 Maven project. Read more on [how to import Vaadin projects to different IDEs](https://vaadin.com/docs/latest/guide/step-by-step/importing) (Eclipse, IntelliJ IDEA, NetBeans, and VS Code).
+
+### Import Pinecone embeddings
+
+In case of using Pinecone, the following argument has to be provided to generate and import the document embeddings. As the index is available, we do not need to recreate it each time.
+
+```
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--import-docs
+```
