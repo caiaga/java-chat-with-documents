@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.ApplicationArguments;
 
 import static dev.langchain4j.internal.Utils.randomUUID;
 
@@ -29,6 +30,9 @@ public class AIConfig {
 
     @Value("${ai.docs.location}")
     private String docsLocation;
+
+    @Value("${ai.embedding-store}")
+    private String embeddingStoreType;
 
     /*
      * Keep track of the chat history for each chat.
@@ -46,20 +50,21 @@ public class AIConfig {
      * See
      * https://docs.langchain4j.dev/integrations/embedding-stores/ for more information.
      */
-    // @Bean
-    // EmbeddingStore<TextSegment> embeddingStore() {
-    //     return new InMemoryEmbeddingStore<>();
-    // }
     @Bean
     EmbeddingStore<TextSegment> embeddingStore(
         @Value("${pinecone.api-key}") String apiKey,
-        @Value("${pinecone.environment}") String environment,
-        @Value("${pinecone.project-id}") String projectId,
-        @Value("${pinecone.index-name}") String indexName) {
-        return PineconeEmbeddingStore.builder()
-            .apiKey(apiKey)
-            .index(indexName)
-            .build();
+        @Value("${pinecone.index}") String index) {
+
+        if ("pinecone".equals(embeddingStoreType)) {
+            log.info("Using 'pinecone' embedding store");
+            return PineconeEmbeddingStore.builder()
+                .apiKey(apiKey)
+                .index(index)
+                .build();
+        } else {
+            log.info("Using 'in-memory' embedding store");
+            return new InMemoryEmbeddingStore<>();
+        }
     }
 
     /*
@@ -69,16 +74,20 @@ public class AIConfig {
      * consuming them.
      */
     @Bean
-    ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore) {
-        return args -> {
-            if (docsLocation == null || docsLocation.isEmpty()) {
-                log.error("No document location specified, configure 'docs.location' in application.properties");
-                return;
+    ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore, ApplicationArguments args) {
+        return runnerArgs -> {
+            if ("inmemory".equals(embeddingStoreType) || args.containsOption("import-docs")) {
+                if (docsLocation == null || docsLocation.isEmpty()) {
+                    log.error("No document location specified, configure 'ai.docs.location' in application.properties");
+                    return;
+                }
+                log.info("Importing documents from {}", docsLocation);
+                var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
+                EmbeddingStoreIngestor.ingest(docs, embeddingStore);
+                log.info("Imported {} documents", docs.size());
+            } else {
+                log.info("Skipping document import. Use --import-docs to import documents.");
             }
-            log.info("Importing documents from {}", docsLocation);
-            var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
-            EmbeddingStoreIngestor.ingest(docs, embeddingStore);
-            log.info("Imported {} documents", docs.size());
         };
     }
 

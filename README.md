@@ -46,3 +46,11 @@ http://localhost:8080 in your browser.
 
 You can also import the project to your IDE of choice as you would with any
 Maven project. Read more on [how to import Vaadin projects to different IDEs](https://vaadin.com/docs/latest/guide/step-by-step/importing) (Eclipse, IntelliJ IDEA, NetBeans, and VS Code).
+
+### Import Pinecone embeddings
+
+In case of using Pinecone, the following argument has to be provided to generate and import the document embeddings. As the index is available, we do not need to recreate it each time.
+
+```
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--import-docs
+```
