@@ -64,7 +64,7 @@ public class AIConfig {
                 return;
             }
             log.info("Importing documents from {}", docsLocation);
-            var docs = FileSystemDocumentLoader.loadDocuments(docsLocation);
+            var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
             EmbeddingStoreIngestor.ingest(docs, embeddingStore);
             log.info("Imported {} documents", docs.size());
         };
