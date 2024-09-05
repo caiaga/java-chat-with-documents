@@ -1,5 +1,7 @@
 package com.vaadin.demo;
 
+import java.util.List;
+import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
@@ -14,6 +16,8 @@ import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dev.langchain4j.store.embedding.pinecone.PineconeEmbeddingStore;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -101,16 +105,28 @@ public class AIConfig {
                 }
                 log.info("Importing documents from {}", docsLocation);
                 var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
+
                 if (embeddingModel != null) {
-                    EmbeddingStoreIngestor.builder()
+                    EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                         .embeddingStore(embeddingStore)
                         .embeddingModel(embeddingModel)
-                        .build()
-                        .ingest(docs);
+                        .build();
+
+                    int batchSize = 1;
+                    for (int i = 0; i < docs.size(); i += batchSize) {
+                        int end = Math.min(i + batchSize, docs.size());
+                        List<Document> batch = docs.subList(i, end);
+                        try {
+                            ingestor.ingest(batch);
+                            log.info("Imported batch {} to {} of {} documents", i, end, docs.size());
+                        } catch (Exception e) {
+                            log.error("Error importing batch {} to {}: {}", i, end, e.getMessage());
+                        }
+                    }
                 } else {
                     EmbeddingStoreIngestor.ingest(docs, embeddingStore);
                 }
-                log.info("Imported {} documents", docs.size());
+                log.info("Finished importing {} documents", docs.size());
             } else {
                 log.info("Skipping document import. Use --import-docs to import documents.");
             }
