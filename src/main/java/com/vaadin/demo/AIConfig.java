@@ -20,6 +20,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import static dev.langchain4j.internal.Utils.randomUUID;
+
 @Configuration
 public class AIConfig {
 
@@ -56,9 +58,7 @@ public class AIConfig {
         @Value("${pinecone.index-name}") String indexName) {
         return PineconeEmbeddingStore.builder()
             .apiKey(apiKey)
-            .environment(environment)
-            .projectId(projectId)
-            .indexName(indexName)
+            .index(indexName)
             .build();
     }
 
