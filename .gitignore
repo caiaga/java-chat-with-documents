@@ -4,6 +4,10 @@
 .settings
 .project
 .classpath
+.env
+
+# docs
+docs/
 
 *.iml
 .DS_Store
