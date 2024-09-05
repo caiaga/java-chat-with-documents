@@ -12,13 +12,13 @@ import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
+import dev.langchain4j.store.embedding.pinecone.PineconeEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 
 @Configuration
 public class AIConfig {
@@ -27,7 +27,6 @@ public class AIConfig {
 
     @Value("${ai.docs.location}")
     private String docsLocation;
-
 
     /*
      * Keep track of the chat history for each chat.
@@ -45,9 +44,22 @@ public class AIConfig {
      * See
      * https://docs.langchain4j.dev/integrations/embedding-stores/ for more information.
      */
+    // @Bean
+    // EmbeddingStore<TextSegment> embeddingStore() {
+    //     return new InMemoryEmbeddingStore<>();
+    // }
     @Bean
-    EmbeddingStore<TextSegment> embeddingStore() {
-        return new InMemoryEmbeddingStore<>();
+    EmbeddingStore<TextSegment> embeddingStore(
+        @Value("${pinecone.api-key}") String apiKey,
+        @Value("${pinecone.environment}") String environment,
+        @Value("${pinecone.project-id}") String projectId,
+        @Value("${pinecone.index-name}") String indexName) {
+        return PineconeEmbeddingStore.builder()
+            .apiKey(apiKey)
+            .environment(environment)
+            .projectId(projectId)
+            .indexName(indexName)
+            .build();
     }
 
     /*
@@ -64,7 +76,7 @@ public class AIConfig {
                 return;
             }
             log.info("Importing documents from {}", docsLocation);
-            var docs = FileSystemDocumentLoader.loadDocuments(docsLocation);
+            var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
             EmbeddingStoreIngestor.ingest(docs, embeddingStore);
             log.info("Imported {} documents", docs.size());
         };
