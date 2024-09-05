@@ -36,7 +36,11 @@ If you need to store more documents, consider using any of the [embedding stores
 
 #### Pinecone
 
-To use Pinecone, get an [API key](https://www.pinecone.io/), set up an index and configure them in `application.properties`. Use or set up an index with a vector dimension of 384.
+To use Pinecone, use or set up an index with a vector dimension of 384. Also, provide the following details in the `application.properties` file.
+
+- [API key](https://www.pinecone.io/)
+- index name
+- set `ai.embedding-store` to `pinecone`
 
 ## ▶️ Running the application
 
