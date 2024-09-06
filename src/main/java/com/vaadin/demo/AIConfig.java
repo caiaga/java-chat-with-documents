@@ -16,6 +16,7 @@ import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dev.langchain4j.store.embedding.pinecone.PineconeEmbeddingStore;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.document.Document;
@@ -59,6 +60,9 @@ public class AIConfig {
 
     @Value("${github.access.token}")
     private String githubAccessToken;
+
+    @Value("${ai.injest.batch.size}")
+    private int injestBatchSize;
 
     /*
      * Keep track of the chat history for each chat.
@@ -146,29 +150,12 @@ public class AIConfig {
             return;
         }
         log.info("Importing documents from {}", docsLocation);
-        var docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
-
+        List<Document> docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
         if (embeddingModel != null) {
-            EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
-                .embeddingStore(embeddingStore)
-                .embeddingModel(embeddingModel)
-                .build();
-
-            int batchSize = 1;
-            for (int i = 0; i < docs.size(); i += batchSize) {
-                int end = Math.min(i + batchSize, docs.size());
-                List<Document> batch = docs.subList(i, end);
-                try {
-                    ingestor.ingest(batch);
-                    log.info("Imported batch {} to {} of {} documents", i, end, docs.size());
-                } catch (Exception e) {
-                    log.error("Error importing batch {} to {}: {}", i, end, e.getMessage());
-                }
-            }
+            ingestDocumentsInBatches(docs, embeddingStore, embeddingModel);
         } else {
             EmbeddingStoreIngestor.ingest(docs, embeddingStore);
         }
-        log.info("Finished importing {} documents", docs.size());
     }
 
     /*
@@ -198,16 +185,33 @@ public class AIConfig {
         DocumentParser parser = new TextDocumentParser();
         GitHubDocumentLoader loader = GitHubDocumentLoader.builder().gitHubToken(githubAccessToken).build();
         List<Document> allDocs = loader.loadDocuments(githubOwner, githubRepo, githubBranch, parser);
-        if (embeddingModel != null) {
-            EmbeddingStoreIngestor.builder()
+        ingestDocumentsInBatches(allDocs, embeddingStore, embeddingModel);
+    }
+
+    /*
+     * Injest the documents in batches into the embedding store.
+     */
+     private void ingestDocumentsInBatches(List<Document> allDocs, EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+
+         
+            EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
-                .build()
-                .ingest(allDocs);
-        } else {
-            EmbeddingStoreIngestor.ingest(allDocs, embeddingStore);
-        }
-        log.info("Imported {} documents", allDocs.size());
+                .build();
+
+            for (int i = 0; i < allDocs.size(); i += injestBatchSize) {
+                int end = Math.min(i + injestBatchSize, allDocs.size());
+                List<Document> batch = allDocs.subList(i, end);
+                try {
+                    ingestor.ingest(batch);
+                    log.info("Imported batch {} to {} of {} documents", i, end, allDocs.size());
+                } catch (Exception e) {
+                    log.error("Error importing batch {} to {}: {}", i, end, e.getMessage());
+                }
+            }
+        
+
+        log.info("Finished importing {} documents", allDocs.size());        
     }
 
     /*
