@@ -46,8 +46,8 @@ public class AIConfig {
     @Value("${ai.embedding-model}")
     private String embeddingModelType;
 
-    @Value("${ai.docs.location.type}")
-    private String docsLocationType;
+    @Value("${ai.docs.source.type}")
+    private String docsSourceType;
 
     @Value("${github.repo}")
     private String githubRepo;
@@ -118,7 +118,7 @@ public class AIConfig {
     ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, ApplicationArguments args) {
         return runnerArgs -> {
             if ("inmemory".equals(embeddingStoreType) || args.containsOption("import-docs")) {
-                if(docsLocationType.equals("filesystem")) {
+                if(docsSourceType.equals("local")) {
                     if (docsLocation == null || docsLocation.isEmpty()) {
                         log.error("No document location specified, configure 'ai.docs.location' in application.properties");
                         return;
@@ -147,7 +147,7 @@ public class AIConfig {
                         EmbeddingStoreIngestor.ingest(docs, embeddingStore);
                     }
                     log.info("Finished importing {} documents", docs.size());
-                } else if(docsLocationType.equals("github")){
+                } else if(docsSourceType.equals("github")){
                     if (githubRepo == null || githubRepo.isEmpty()) {
                         log.error("No github repo url specified, configure 'github.repo' in application.properties");
                         return;
@@ -179,7 +179,7 @@ public class AIConfig {
                     }
                     log.info("Imported {} documents", allDocs.size());
                 } else {
-                    log.error("Unknown document location type '{}'", docsLocationType);
+                    log.error("Unknown document source type '{}'", docsSourceType);
                 }
             } else {
                 log.info("Skipping document import. Use --import-docs to import documents.");
