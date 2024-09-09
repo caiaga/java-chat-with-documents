@@ -120,6 +120,7 @@ public class AIConfig {
     private void importLocalDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
         log.info("Importing documents from {}", validateProperties.getDocsLocation());
         List<Document> docs = FileSystemDocumentLoader.loadDocumentsRecursively(validateProperties.getDocsLocation());
+        log.info("Processing {} documents from local file system", docs.size());
         ingestDocumentsInBatches(docs, embeddingStore, embeddingModel);
     }
 
@@ -134,6 +135,7 @@ public class AIConfig {
         DocumentParser parser = new TextDocumentParser();
         GitHubDocumentLoader loader = GitHubDocumentLoader.builder().gitHubToken(validateProperties.getGithubAccessToken()).build();
         List<Document> allDocs = loader.loadDocuments(validateProperties.getGithubOwner(), validateProperties.getGithubRepo(), validateProperties.getGithubBranch(), parser);
+        log.info("Processing {} documents from GitHub", allDocs.size());
         ingestDocumentsInBatches(allDocs, embeddingStore, embeddingModel);
     }
 
