@@ -72,9 +72,9 @@ Follow the steps below to run the application using Docker:
     mvn clean package -Pproduction
     ```
 
-2. **Build the Docker Image**: Build the Docker image with the tag `ai-app:latest`.
+2. **Build the Docker Image**: 
     ```sh
-    docker build -t ai-app:latest .
+    docker build -t your-app-name:latest .
     ```
 
 3. **Run the Docker Container**: Run the Docker container with the necessary environment variables.
@@ -84,7 +84,7 @@ Follow the steps below to run the application using Docker:
       -e PINECONE_API_KEY=your-pinecone-api-key \
       -e LOCAL_DOC_DIRECTORY=/path/to/local/doc/directory \
       -e GITHUB_ACCESS_TOKEN=your-github-access-token \
-      ai-app:latest
+      your-app-name:latest
     ```
 
 Replace the placeholders with your actual values:
