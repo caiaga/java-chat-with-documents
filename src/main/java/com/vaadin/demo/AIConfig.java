@@ -30,6 +30,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.ApplicationArguments;
 
+
 import static dev.langchain4j.internal.Utils.randomUUID;
 
 @Configuration
@@ -37,32 +38,11 @@ public class AIConfig {
 
     private static final Logger log = LoggerFactory.getLogger(AIConfig.class);
 
-    @Value("${ai.docs.location}")
-    private String docsLocation;
+    private final ValidateProperties validateProperties;
 
-    @Value("${ai.embedding-store}")
-    private String embeddingStoreType;
-
-    @Value("${ai.embedding-model}")
-    private String embeddingModelType;
-
-    @Value("${ai.docs.source.type}")
-    private String docsSourceType;
-
-    @Value("${github.repo}")
-    private String githubRepo;
-
-    @Value("${github.branch}")
-    private String githubBranch;
-
-    @Value("${github.owner}")
-    private String githubOwner;
-
-    @Value("${github.access.token}")
-    private String githubAccessToken;
-
-    @Value("${ai.injest.batch.size}")
-    private int injestBatchSize;
+    public AIConfig(ValidateProperties validateProperties) {
+        this.validateProperties = validateProperties;
+    }
 
     /*
      * Keep track of the chat history for each chat.
@@ -85,7 +65,7 @@ public class AIConfig {
         @Value("${pinecone.api-key}") String apiKey,
         @Value("${pinecone.index}") String index) {
 
-        if ("pinecone".equals(embeddingStoreType)) {
+        if ("pinecone".equals(validateProperties.getEmbeddingStoreType())) {
             log.info("Using 'pinecone' embedding store");
             return PineconeEmbeddingStore.builder()
                 .apiKey(apiKey)
@@ -99,7 +79,7 @@ public class AIConfig {
 
     @Bean
     EmbeddingModel embeddingModel(@Value("${open-ai.embedding-model.api-key}") String apiKey) {
-        if ("openai".equals(embeddingModelType) && !apiKey.isEmpty()) {
+        if ("openai".equals(validateProperties.getEmbeddingModelType()) && !apiKey.isEmpty()) {
             log.info("Using OpenAI embedding model");
             return OpenAiEmbeddingModel.builder()
                 .apiKey(apiKey)
@@ -120,8 +100,8 @@ public class AIConfig {
     @Bean
     ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, ApplicationArguments args) {
         return runnerArgs -> {
-            if ("inmemory".equals(embeddingStoreType) || args.containsOption("import-docs")) {
-                switch (docsSourceType) {
+            if ("inmemory".equals(validateProperties.getEmbeddingStoreType()) || args.containsOption("import-docs")) {
+                switch (validateProperties.getDocsSourceType()) {
                     case "local":
                         importLocalDocuments(embeddingStore, embeddingModel);
                         break;
@@ -129,7 +109,7 @@ public class AIConfig {
                         importGitHubDocuments(embeddingStore, embeddingModel);
                         break;
                     default:
-                        log.error("Unknown document source type '{}'", docsSourceType);
+                        log.error("Unknown document source type '{}'", validateProperties.getDocsSourceType());
                         break;
                 }
             } else {
@@ -145,17 +125,9 @@ public class AIConfig {
      * consuming them.
      */
     private void importLocalDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
-        if (docsLocation == null || docsLocation.isEmpty()) {
-            log.error("No document location specified, configure 'ai.docs.location' in application.properties");
-            return;
-        }
-        log.info("Importing documents from {}", docsLocation);
-        List<Document> docs = FileSystemDocumentLoader.loadDocumentsRecursively(docsLocation);
-        if (embeddingModel != null) {
-            ingestDocumentsInBatches(docs, embeddingStore, embeddingModel);
-        } else {
-            EmbeddingStoreIngestor.ingest(docs, embeddingStore);
-        }
+        log.info("Importing documents from {}", validateProperties.getDocsLocation());
+        List<Document> docs = FileSystemDocumentLoader.loadDocumentsRecursively(validateProperties.getDocsLocation());
+        ingestDocumentsInBatches(docs, embeddingStore, embeddingModel);
     }
 
     /*
@@ -165,26 +137,10 @@ public class AIConfig {
      * consuming them.
      */
     private void importGitHubDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
-        if (githubRepo == null || githubRepo.isEmpty()) {
-            log.error("No github repo url specified, configure 'github.repo' in application.properties");
-            return;
-        }
-        if (githubBranch == null || githubBranch.isEmpty()) {
-            log.error("No github branch specified, configure 'github.branch' in application.properties");
-            return;
-        }
-        if (githubOwner == null || githubOwner.isEmpty()) {
-            log.error("No github owner specified, configure 'github.owner' in application.properties");
-            return;
-        }
-        if (githubAccessToken == null || githubAccessToken.isEmpty()) {
-            log.error("No github access token specified, configure 'github.access.token' in application.properties");
-            return;
-        }
-        log.info("Importing documents from github repo {}", githubRepo);
+        log.info("Importing documents from github repo {}", validateProperties.getGithubRepo());
         DocumentParser parser = new TextDocumentParser();
-        GitHubDocumentLoader loader = GitHubDocumentLoader.builder().gitHubToken(githubAccessToken).build();
-        List<Document> allDocs = loader.loadDocuments(githubOwner, githubRepo, githubBranch, parser);
+        GitHubDocumentLoader loader = GitHubDocumentLoader.builder().gitHubToken(validateProperties.getGithubAccessToken()).build();
+        List<Document> allDocs = loader.loadDocuments(validateProperties.getGithubOwner(), validateProperties.getGithubRepo(), validateProperties.getGithubBranch(), parser);
         ingestDocumentsInBatches(allDocs, embeddingStore, embeddingModel);
     }
 
@@ -192,15 +148,13 @@ public class AIConfig {
      * Injest the documents in batches into the embedding store.
      */
      private void ingestDocumentsInBatches(List<Document> allDocs, EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
-
-         
             EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
                 .build();
 
-            for (int i = 0; i < allDocs.size(); i += injestBatchSize) {
-                int end = Math.min(i + injestBatchSize, allDocs.size());
+            for (int i = 0; i < allDocs.size(); i += validateProperties.getInjestBatchSize()) {
+                int end = Math.min(i + validateProperties.getInjestBatchSize(), allDocs.size());
                 List<Document> batch = allDocs.subList(i, end);
                 try {
                     ingestor.ingest(batch);
