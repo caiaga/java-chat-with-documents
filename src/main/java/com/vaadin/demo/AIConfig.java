@@ -1,6 +1,7 @@
 package com.vaadin.demo;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
 import dev.langchain4j.data.document.loader.github.GitHubDocumentLoader;
 import dev.langchain4j.data.segment.TextSegment;
@@ -17,6 +18,7 @@ import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentParser;
 import dev.langchain4j.data.document.parser.TextDocumentParser;
+import dev.langchain4j.data.document.DocumentTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +26,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.ApplicationArguments;
-
 
 @Configuration
 public class AIConfig {
@@ -94,12 +95,17 @@ public class AIConfig {
     ApplicationRunner docImporter(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, ApplicationArguments args) {
         return runnerArgs -> {
             if ("inmemory".equals(validateProperties.getEmbeddingStoreType()) || args.containsOption("import-docs")) {
+                String baseDocUrl = validateProperties.getBaseDocUrl();
+                DocumentTransformer markdownOptimizer = new MarkdownOptimizer(
+                    validateProperties.getDocsLocation(),
+                    baseDocUrl
+                );
                 switch (validateProperties.getDocsSourceType()) {
                     case "local":
-                        importLocalDocuments(embeddingStore, embeddingModel);
+                        importLocalDocuments(embeddingStore, embeddingModel, markdownOptimizer);
                         break;
                     case "github":
-                        importGitHubDocuments(embeddingStore, embeddingModel);
+                        importGitHubDocuments(embeddingStore, embeddingModel, markdownOptimizer);
                         break;
                     default:
                         log.error("Unknown document source type '{}'", validateProperties.getDocsSourceType());
@@ -117,11 +123,16 @@ public class AIConfig {
      * on a separate build server as they are updated, not in the app that's
      * consuming them.
      */
-    private void importLocalDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+    private void importLocalDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, DocumentTransformer transformer) {
         log.info("Importing documents from {}", validateProperties.getDocsLocation());
-        List<Document> docs = FileSystemDocumentLoader.loadDocumentsRecursively(validateProperties.getDocsLocation());
+        List<Document> docs = FileSystemDocumentLoader.loadDocumentsRecursively(validateProperties.getDocsLocation(), new TextDocumentParser());
+        List<Document> optimizedDocs = docs.stream().map(transformer::transform).collect(Collectors.toList());
+        log.info("Documents loaded:");
+        for (Document doc : optimizedDocs) {
+            log.info("Document: {}", doc);
+        }
         log.info("Processing {} documents from local file system", docs.size());
-        ingestDocumentsInBatches(docs, embeddingStore, embeddingModel);
+        ingestDocumentsInBatches(optimizedDocs, embeddingStore, embeddingModel);
     }
 
     /*
@@ -130,13 +141,14 @@ public class AIConfig {
      * on a separate build server as they are updated, not in the app that's
      * consuming them.
      */
-    private void importGitHubDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+    private void importGitHubDocuments(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, DocumentTransformer transformer) {
         log.info("Importing documents from github repo {}", validateProperties.getGithubRepo());
         DocumentParser parser = new TextDocumentParser();
         GitHubDocumentLoader loader = GitHubDocumentLoader.builder().gitHubToken(validateProperties.getGithubAccessToken()).build();
         List<Document> allDocs = loader.loadDocuments(validateProperties.getGithubOwner(), validateProperties.getGithubRepo(), validateProperties.getGithubBranch(), parser);
+        List<Document> optimizedDocs = allDocs.stream().map(transformer::transform).collect(Collectors.toList());
         log.info("Processing {} documents from GitHub", allDocs.size());
-        ingestDocumentsInBatches(allDocs, embeddingStore, embeddingModel);
+        ingestDocumentsInBatches(optimizedDocs, embeddingStore, embeddingModel);
     }
 
     /*
