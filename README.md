@@ -63,15 +63,35 @@ http://localhost:8080 in your browser.
 You can also import the project to your IDE of choice as you would with any
 Maven project. Read more on [how to import Vaadin projects to different IDEs](https://vaadin.com/docs/latest/guide/step-by-step/importing) (Eclipse, IntelliJ IDEA, NetBeans, and VS Code).
 
-## Runnuing the application using docker
+## Running the Application Using Docker
 
-Use belo commands to run it using docker.
+Follow the steps below to run the application using Docker:
 
-1. mvn clean package -Pproduction
+1. **Build the Project**: Clean and package the project using Maven.
+    ```sh
+    mvn clean package -Pproduction
+    ```
 
-2. docker build -t ai-app:latest .
+2. **Build the Docker Image**: Build the Docker image with the tag `ai-app:latest`.
+    ```sh
+    docker build -t ai-app:latest .
+    ```
 
-3. docker run -d -p 8080:8080 --name {{IMAGE-NAME}} -e OPENAI_API_KEY={{YOUR-OPEN-API-KEY}}  -e PINECONE_API_KEY={{YOUR-PINECONE-KEY}} -e LOCAL_DOC_DIRECTORY={{LOCAL-DIR-PATH}} -e GITHUB_ACCESS_TOKEN={{YOUR-GITHUB-ACCESS-TOKEN}}  ai-app:latest
+3. **Run the Docker Container**: Run the Docker container with the necessary environment variables.
+    ```sh
+    docker run -d -p 8080:8080 --name ai-app-container \
+      -e OPENAI_API_KEY=your-openai-api-key \
+      -e PINECONE_API_KEY=your-pinecone-api-key \
+      -e LOCAL_DOC_DIRECTORY=/path/to/local/doc/directory \
+      -e GITHUB_ACCESS_TOKEN=your-github-access-token \
+      ai-app:latest
+    ```
+
+Replace the placeholders with your actual values:
+- `your-openai-api-key`: Your actual OpenAI API key.
+- `your-pinecone-api-key`: Your actual Pinecone API key.
+- `/path/to/local/doc/directory`: The path to your local documentation directory.
+- `your-github-access-token`: Your actual GitHub access token.
 
 ### Import Pinecone embeddings
 
