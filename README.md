@@ -63,6 +63,16 @@ http://localhost:8080 in your browser.
 You can also import the project to your IDE of choice as you would with any
 Maven project. Read more on [how to import Vaadin projects to different IDEs](https://vaadin.com/docs/latest/guide/step-by-step/importing) (Eclipse, IntelliJ IDEA, NetBeans, and VS Code).
 
+## Runnuing the application using docker
+
+Use belo commands to run it using docker.
+
+1. mvn clean package -Pproduction
+
+2. docker build -t ai-app:latest .
+
+3. docker run -d -p 8080:8080 --name {{IMAGE-NAME}} -e OPENAI_API_KEY={{YOUR-OPEN-API-KEY}}  -e PINECONE_API_KEY={{YOUR-PINECONE-KEY}} -e LOCAL_DOC_DIRECTORY={{LOCAL-DIR-PATH}} -e GITHUB_ACCESS_TOKEN={{YOUR-GITHUB-ACCESS-TOKEN}}  ai-app:latest
+
 ### Import Pinecone embeddings
 
 In case of using Pinecone, the following argument has to be provided to generate and import the document embeddings. As the index is available, we do not need to recreate it each time.
@@ -70,3 +80,4 @@ In case of using Pinecone, the following argument has to be provided to generate
 ```
 ./mvnw spring-boot:run -Dspring-boot.run.arguments=--import-docs
 ```
+
