@@ -31,6 +31,9 @@ public class ValidateProperties {
     @Value("${ai.injest.batch.size}")
     private int injestBatchSize;
 
+    @Value("${base.doc.url}")
+    private String baseDocUrl;
+
     @Value("${github.repo}")
     private String githubRepo;
 
@@ -82,6 +85,14 @@ public class ValidateProperties {
 
     public void setInjestBatchSize(int injestBatchSize) {
         this.injestBatchSize = injestBatchSize;
+    }
+
+    public String getBaseDocUrl() {
+        return baseDocUrl;
+    }
+
+    public void setBaseDocUrl(String baseDocUrl) {
+        this.baseDocUrl = baseDocUrl;
     }
 
     public String getGithubRepo() {
