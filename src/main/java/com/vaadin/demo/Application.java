@@ -5,6 +5,7 @@ import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.theme.Theme;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 /**
  * The entry point of the Spring Boot application.
@@ -14,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @Push
 @SpringBootApplication
+@EnableConfigurationProperties(ValidateProperties.class)
 @Theme(value = "doc-chat")
 public class Application implements AppShellConfigurator {
 
