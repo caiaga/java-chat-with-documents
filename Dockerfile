@@ -12,4 +12,5 @@ VOLUME /tmp
 ARG JAR_FILE=target/doc-chat-1.0-SNAPSHOT.jar
 COPY ${JAR_FILE} app.jar
 COPY src/main/resources/application.properties /app/config/application.properties
+#COPY src/main/resources/cnx /app/config/cnx
 ENTRYPOINT ["java", "-Dspring.config.location=file:/app/config/application.properties", "-jar", "/app/app.jar"]
