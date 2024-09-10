@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  app:
+    image: ai-app:latest  # Replace with your application's Docker image
+    container_name: ai-app
+    ports:
+      - "8080:8080"  # Expose your application on port 8080 (adjust as needed)
+    environment:
+      - OPENAI_API_KEY=your-openai-api-key
+      - PINECONE_API_KEY=your-pinecone-api-key
+      - LOCAL_DOC_DIRECTORY=your-local-dir       # /app/config/cnx
+      - GITHUB_ACCESS_TOKEN=your-github-access-token
+      - BATCH_SIZE=1
+      - EMBEDDING-STORE=pinecone
+      - EMDEDDING-MODEL=openai
+      - PINECONE_INDEX=test
+      - DOC_SOURCE=github
+      - CHAT_MODEL=gpt-4o-mini
+    command: "java -jar /app/app.jar --import-docs"

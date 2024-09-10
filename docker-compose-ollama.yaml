@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    image: ai-app:latest  # Replace with your application's Docker image
+    container_name: ai-app
+    ports:
+      - "8080:8080"  # Expose your application on port 8080 (adjust as needed)
+    environment:
+      - OPENAI_API_KEY=your-openai-api-key
+      - PINECONE_API_KEY=your-pinecone-api-key
+      - LOCAL_DOC_DIRECTORY=your directory path                   #/app/config/cnx
+      - GITHUB_ACCESS_TOKEN=your-github-access-token
+      - OLLAMA_BASEURL=http://ollama:11434/v1
+      - BATCH_SIZE=1
+    depends_on:
+      - ollama
+      - ollama-webui
+    networks:
+      - ollama-docker
+      
+  ollama:
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+    container_name: ollama
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:latest
+    ports:
+      - 11434:11434
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    networks:
+      - ollama-docker
+
+  ollama-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: ollama-webui
+    volumes:
+      - ./ollama/ollama-webui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - 8090:8080
+    environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
+      - OLLAMA_BASE_URLS=http://ollama:11434 #comma separated ollama hosts
+      - ENV=dev
+      - WEBUI_AUTH=False
+      - WEBUI_NAME=valiantlynx AI
+      - WEBUI_URL=http://localhost:8090
+      - WEBUI_SECRET_KEY=t0p-s3cr3t
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+    networks:
+      - ollama-docker
+
+networks:
+  ollama-docker:
+    external: false
+    driver: bridge
